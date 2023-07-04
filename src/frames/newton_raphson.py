@@ -1,5 +1,5 @@
 from sympy import symbols, sympify, lambdify
-from equations import bisection_compute
+from equations import newton_raphson_compute
 from customtkinter import (
     CTkScrollableFrame,
     CTkFrame,
@@ -19,7 +19,7 @@ from utils import (
 )
 
 
-class BisectionInputFrame(CTkFrame):
+class NewtonRaphsonInputFrame(CTkFrame):
     def create_textbox(self, row, label):
         group = CTkFrame(self.container, fg_color="transparent")
         group.grid(row=row, column=0, pady=10, sticky="ew")
@@ -39,25 +39,23 @@ class BisectionInputFrame(CTkFrame):
         self.grid_columnconfigure(0, weight=1)
 
         self.labels = []
-        self.frame_title = create_frame_title(self, "Bisection Method: INPUT")
+        self.frame_title = create_frame_title(self, "Newton-Raphson Method: INPUT")
 
         self.container = CTkFrame(self, fg_color="transparent")
         self.container.grid(row=1, column=0, sticky="ew", padx=20, pady=20)
-        self.container.grid_rowconfigure(5, weight=1)
+        self.container.grid_rowconfigure(4, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
         self.equation_input = self.create_textbox(0, "Equation:")
-        self.left_input = self.create_textbox(1, "Initial Value for xₗ:")
-        self.right_input = self.create_textbox(2, "Initial Value for xᵣ:")
-        self.precision_input = self.create_textbox(3, "Precision(Decimal Places):")
+        self.initial_input = self.create_textbox(1, "Initial Value for xₒ:")
+        self.precision_input = self.create_textbox(2, "Precision(Decimal Places):")
         self.equation_input.insert(0, "4x^2 + 2x - 5")
-        self.left_input.insert(0, "0")
-        self.right_input.insert(0, "1")
+        self.initial_input.insert(0, "0")
         self.precision_input.insert(0, "4")
 
         self.control_group = CTkFrame(self.container, fg_color="transparent")
         self.control_group.grid_columnconfigure(2, weight=1)
-        self.control_group.grid(row=4, column=0, pady=20, sticky="e")
+        self.control_group.grid(row=3, column=0, pady=20, sticky="e")
         self.compute_btn = CTkButton(
             self.control_group,
             text="Compute",
@@ -70,12 +68,22 @@ class BisectionInputFrame(CTkFrame):
         )
         self.back_btn.grid(row=0, column=0, padx=10)
 
-    def compute(self, parent, expression, left, right, precision):
-        parent.frames["BisectionResult"].show_result(
-            iterations=bisection_compute(expression, left, right, precision),
+    def compute(
+        self,
+        parent,
+        expression,
+        old_x,
+        precision,
+        original_expression,
+        derivative,
+    ):
+        parent.frames["NewtonRaphsonResult"].show_result(
+            original_expression,
+            derivative,
+            iterations=newton_raphson_compute(expression, old_x, precision),
             precision=precision,
         )
-        parent.show_frame("BisectionResult")
+        parent.show_frame("NewtonRaphsonResult")
 
     def validate(self, parent):
         x = symbols("x")
@@ -91,24 +99,18 @@ class BisectionInputFrame(CTkFrame):
             print("Invalid expression")
             return
 
-        x_left = None
+        derivative = None
         try:
-            x_left = float(self.left_input.get())
+            derivative = expression.diff(x)
         except Exception:
-            print("Invalid Left Value")
+            print("Unable to get derivative from expression")
             return
 
-        x_right = None
+        initial_x = None
         try:
-            x_right = float(self.right_input.get())
+            initial_x = float(self.initial_input.get())
         except Exception:
-            print("Invalid Right Value")
-            return
-
-        f = lambdify([x], expression)
-
-        if x_left > x_right or f(x_left) * f(x_right) >= 0:
-            print("Expression cannot be evaluated with given values")
+            print("Invalid Initial Value")
             return
 
         precision = None
@@ -120,10 +122,17 @@ class BisectionInputFrame(CTkFrame):
             print("Invalid Precision")
             return
 
-        self.compute(parent, expression, x_left, x_right, precision)
+        self.compute(
+            parent,
+            expression,
+            initial_x,
+            precision,
+            original_expression,
+            derivative,
+        )
 
 
-class BisectionResultFrame(CTkFrame):
+class NewtonRaphsonResultFrame(CTkFrame):
     def create_text_value(self, column, row, label):
         container = CTkFrame(self.value_group, fg_color="transparent")
         container.grid(row=row, column=column, sticky="ew", pady=10)
@@ -148,21 +157,23 @@ class BisectionResultFrame(CTkFrame):
         self.labels = []
         self.headers = []
 
-        self.frame_title = create_frame_title(self, "Bisection Method: RESULT")
+        self.frame_title = create_frame_title(self, "Newton-Raphson Method: RESULT")
+
         self.value_group = CTkFrame(self, fg_color="transparent")
-        self.value_group.grid(row=1, column=0, sticky="ew", padx=100, pady=5)
+        self.value_group.grid(row=1, column=0, sticky="ew", padx=100)
         self.value_group.grid_rowconfigure(3, weight=1)
         self.value_group.grid_columnconfigure(0, weight=1)
 
-        self.left_value = self.create_text_value(column=0, row=0, label="f(xₗ)₀:")
-        self.right_value = self.create_text_value(0, 1, "f(xᵣ)₀:")
-        self.precision_value = self.create_text_value(0, 2, "Precision:")
-        self.result_x = self.create_text_value(1, 0, "X:")
-        self.result_y = self.create_text_value(1, 1, "Y:")
+        self.expression_value = self.create_text_value(0, 0, "Expression:")
+        self.initial_value = self.create_text_value(0, 1, "f(xₒ)₀:")
+        self.derivative_value = self.create_text_value(0, 2, "Derivative:")
+        self.precision_value = self.create_text_value(1, 0, "Precision:")
+        self.result_x = self.create_text_value(1, 1, "X:")
+        self.result_y = self.create_text_value(1, 2, "Y:")
         self.output_table = None
 
         self.back_btn = create_back_button(
-            self, command=lambda: parent.show_frame("BisectionInput")
+            self, command=lambda: parent.show_frame("NewtonRaphsonInput")
         )
         self.back_btn.grid(row=3, column=0, sticky="e", padx=20, pady=20)
 
@@ -180,50 +191,46 @@ class BisectionResultFrame(CTkFrame):
             self.output_table,
             text=value,
             font=font,
-            width=125,
+            width=190,
             fg_color=fg_color,
             text_color=text_color,
         )
 
     def create_table_row(self, row, data, bold=False):
         cells = [
-            self.create_table_cell(data["left_x"], bold),
-            self.create_table_cell(data["mid_x"], bold),
-            self.create_table_cell(data["right_x"], bold),
-            self.create_table_cell(data["left_y"], bold),
-            self.create_table_cell(data["mid_y"], bold),
-            self.create_table_cell(data["right_y"], bold),
+            self.create_table_cell(data["old_x"], bold),
+            self.create_table_cell(data["new_x"], bold),
+            self.create_table_cell(data["old_y"], bold),
+            self.create_table_cell(data["new_y"], bold),
         ]
         for i in range(len(cells)):
             cells[i].grid(row=row, column=i, sticky="ew")
         return
 
-    def show_result(self, iterations, precision):
+    def show_result(self, expression, derivative, iterations, precision):
         if self.output_table is not None:
             self.output_table.destroy()
-        if len(iterations) > 6:
+        if len(iterations) > 5:
             self.output_table = CTkScrollableFrame(
                 self,
                 fg_color="transparent",
-                height=200,
+                height=60,
                 scrollbar_button_color=scroll_btn_color,
                 scrollbar_button_hover_color=scroll_hover_color,
             )
         else:
             self.output_table = CTkFrame(self, fg_color="transparent")
-        self.output_table.grid_columnconfigure(6, weight=1)
-        self.output_table.grid(row=2, column=0, sticky="new", padx=20, pady=40)
+        self.output_table.grid_columnconfigure(4, weight=1)
+        self.output_table.grid(row=2, column=0, sticky="new", padx=20, pady=10)
         self.output_table.grid_rowconfigure(len(iterations) + 1, weight=1)
 
         self.output_table_headers = self.create_table_row(
             0,
             {
-                "left_x": "xₗ",
-                "mid_x": "xₘ",
-                "right_x": "xᵣ",
-                "left_y": "f(xₗ)",
-                "mid_y": "f(xₘ)",
-                "right_y": "f(xᵣ)",
+                "old_x": "xₒ",
+                "new_x": "xₙ",
+                "old_y": "f(xₒ)",
+                "new_y": "f(xₙ)",
             },
             bold=True,
         )
@@ -231,9 +238,10 @@ class BisectionResultFrame(CTkFrame):
         for i in range(len(iterations)):
             self.create_table_row(i + 1, iterations[i])
 
-        entry_update(self.left_value, iterations[0]["left_y"])
-        entry_update(self.right_value, iterations[0]["right_y"])
+        entry_update(self.expression_value, expression)
+        entry_update(self.initial_value, iterations[0]["old_y"])
+        entry_update(self.derivative_value, derivative.__str__().replace("**", "^").replace("*x", "x"))
         entry_update(self.precision_value, 1 / (10**precision))
-        entry_update(self.result_x, iterations[-1]["mid_x"])
+        entry_update(self.result_x, iterations[-1]["new_x"])
         y_precision = f".{precision+2}f"
-        entry_update(self.result_y, format(iterations[-1]["mid_y"], y_precision))
+        entry_update(self.result_y, format(iterations[-1]["new_y"], y_precision))

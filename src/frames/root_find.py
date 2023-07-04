@@ -30,10 +30,10 @@ class RootFindFrame(CTkFrame):
             master=parent,
             text=label,
             command=command,
-            font=text_font(16),
+            font=text_font(20),
             width=250,
         )
-        new_btn.grid(row=0, column=column, padx=10, ipadx=20, ipady=10)
+        new_btn.grid(row=0, column=column, padx=10, ipady=10)
         return new_btn
 
     def __init__(self, parent):
@@ -46,17 +46,32 @@ class RootFindFrame(CTkFrame):
         self.bracket_group.grid(row=1, column=0, pady=20)
         self.bisection_btn = self.create_root_btn(
             self.bracket_group,
-            0,
-            "Bisection",
+            column=0,
+            label="Bisection",
             command=lambda: parent.show_frame("BisectionInput"),
         )
-        self.falsi_btn = self.create_root_btn(self.bracket_group, 1, "False Position")
+        self.falsi_btn = self.create_root_btn(
+            self.bracket_group,
+            column=1,
+            label="False Position",
+            command=lambda: parent.show_frame("FalsiInput"),
+        )
 
         self.open_label = self.create_label(2, "Open Method")
         self.open_group = CTkFrame(self, fg_color="transparent")
         self.open_group.grid(row=3, column=0, pady=20)
-        self.newton_btn = self.create_root_btn(self.open_group, 0, "Newton-Raphson")
-        self.secant_btn = self.create_root_btn(self.open_group, 1, "Secant")
+        self.newton_btn = self.create_root_btn(
+            self.open_group,
+            column=0,
+            label="Newton-Raphson",
+            command=lambda: parent.show_frame("NewtonRaphsonInput"),
+        )
+        self.secant_btn = self.create_root_btn(
+            self.open_group,
+            column=1,
+            label="Secant",
+            command=lambda: parent.show_frame("SecantInput"),
+        )
 
         self.back_btn = create_back_button(self, parent.show_home)
         self.back_btn.grid(row=4, column=0, padx=20, pady=20, ipadx=10, sticky="e")

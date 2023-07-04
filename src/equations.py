@@ -1,7 +1,7 @@
 from sympy import symbols, lambdify
 
 
-def bracket_compute(expression, left, right, precision, mid_equation):
+def bracket_loop(expression, left, right, precision, mid_equation):
     iterations = []
     x = symbols("x")
     f = lambdify([x], expression)
@@ -35,19 +35,91 @@ def bracket_compute(expression, left, right, precision, mid_equation):
     return iterations
 
 
+def root_find(expression, left, right, precision, mid_equation, loop):
+    return loop(expression, left, right, precision, mid_equation)
+
+
 def falsi_compute(expression, left, right, precision):
     f = lambdify([symbols("x")], expression)
-    return bracket_compute(
+    return root_find(
         expression,
         left,
         right,
         precision,
-        lambda l, r: l + (r - l) * (f(l) / (f(l) * f(r))),
+        lambda l, r: l + (r - l) * (f(l) / (f(l) - f(r))),
+        bracket_loop,
     )
 
 
 def bisection_compute(expression, left, right, precision):
-    return bracket_compute(expression, left, right, precision, lambda l, r: (l + r) / 2)
+    return root_find(
+        expression, left, right, precision, lambda l, r: (l + r) / 2, bracket_loop
+    )
+
+
+def secant_compute(expression, a, b, precision):
+    def secant_loop(expression, a, b, precision, mid_equation):
+        y = 1
+        iterations = []
+        f = lambdify([symbols("x")], expression)
+        precision_float = 4 / (10**precision)
+        output_precision = precision + 2
+        while abs(y) > precision_float:
+            a_y = round(f(a), output_precision)
+            b_y = round(f(b), output_precision)
+
+            new_x = round(mid_equation(a, b, a_y, b_y), output_precision)
+            new_y = round(f(new_x), output_precision)
+
+            iterations.append(
+                {
+                    "a_x": a,
+                    "b_x": b,
+                    "new_x": new_x,
+                    "a_y": a_y,
+                    "b_y": b_y,
+                    "new_y": new_y,
+                }
+            )
+            a = b
+            b = new_x
+            y = new_y
+        return iterations
+
+    return root_find(
+        expression,
+        a,
+        b,
+        precision,
+        lambda a, b, ay, by: a - ((ay * (a - b)) / (ay - by)),
+        secant_loop,
+    )
+
+
+def newton_raphson_compute(expression, initial_x, precision):
+    y = 1
+    iterations = []
+    f = lambdify([symbols("x")], expression)
+    dx = lambdify([symbols("x")], expression.diff(symbols("x")))
+    precision_float = 4 / (10**precision)
+    output_precision = precision + 2
+    old_x = round(initial_x, output_precision)
+    while abs(y) > precision_float:
+        old_y = round(f(old_x), output_precision)
+        new_x = round(old_x - old_y / dx(old_x), output_precision)
+        new_y = round(f(new_x), output_precision)
+
+        iterations.append(
+            {
+                "old_x": old_x,
+                "new_x": new_x,
+                "old_y": old_y,
+                "new_y": new_y,
+            }
+        )
+        old_x = new_x
+        y = new_y
+    return iterations
 
 
 def binary_convert(num):

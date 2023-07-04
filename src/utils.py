@@ -162,8 +162,8 @@ def text_font(size):
 btn_font = ("Lilita One", 18)
 btn_hover_color = (colors["gray-300"], colors["gray-700"])
 btn_text_color = (colors["neutral-900"], colors["gray-50"])
-scroll_btn_color = (colors["neutral-600"], colors["gray-300"])
-scroll_hover_color = (colors["neutral-800"], colors["gray-100"])
+scroll_btn_color = (colors["neutral-300"], colors["gray-500"])
+scroll_hover_color = (colors["neutral-800"], colors["gray-300"])
 input_text_color = colors["neutral-900"]
 frame_radius = 10
 
@@ -180,29 +180,31 @@ def create_back_button(parent, command):
     )
 
 
-def update(widget, value, index):
+def update(widget, index, value):
     widget.configure(state="normal")
+    widget.delete(index, "end")
     widget.insert(index, value)
 
 
 def textbox_update(textbox, value):
-    update(textbox, value, "0.0")
+    update(textbox, "0.0", value)
     textbox.configure(state="disabled")
 
 
 def entry_update(entry, value):
-    update(entry, value, 0)
+    update(entry, 0, value)
     entry.configure(state="readonly")
 
 
-def create_result_label(parent):
+def create_frame_title(parent, title):
     label = CTkLabel(
         parent,
-        text="Result",
+        text=title,
         font=text_font(26),
         text_color=colors["gray-200"],
         fg_color=colors["sky-700"],
         corner_radius=frame_radius,
+        bg_color="transparent",
     )
     label.grid(row=0, column=0, sticky="ew", ipady=10)
     return label
